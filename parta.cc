@@ -52,12 +52,7 @@ int main(int argc, char *argv[])
         k+=10;
     }
 
-    for(int i=0;i<4;i++)
-    {
-        Ptr<LteEnbPhy> enbiPhy=enbDevs.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
-        enbiPhy->SetTxPower(40);
-    }
-
+    Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(30));
 
     Simulator::Stop(Seconds(30));
     Simulator::Run();
