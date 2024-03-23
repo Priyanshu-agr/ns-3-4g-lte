@@ -17,10 +17,10 @@ int main(int argc, char *argv[])
     ueNodes.Create(40);
 
     MobilityHelper ueMobility;
-    ueMobility.SetMobilityModel("RandomWalk2dMobilityModel");
-
+    ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel");
     ueMobility.Install(ueNodes);
 
+    // Set the position of the eNBs as a sqaure with sides 5km
     MobilityHelper enbMobility;
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
     positionAlloc->Add(Vector(0.0, 0.0, 0.0));
