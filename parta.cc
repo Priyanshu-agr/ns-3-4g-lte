@@ -6,11 +6,24 @@
 
 using namespace ns3;
 
+NS_LOG_COMPONENT_DEFINE("LteLogComponent");
+
 int
 main(int argc, char* argv[])
 {
+    // NS_LOG_INFO("Starting LTE simulation");
+
     // LteHelper provides the methods to add eNBs and UEs and configure them
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>(); // Create an LteHelper object
+
+    // NS_LOG_INFO("Creating Topology");
+    // LogComponentEnableAll(LOG_LEVEL_INFO);
+    LogComponentEnable("LteEnbRrc", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteEnbNetDevice", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteUeRrc", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteEnbPhy", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteRlc", LOG_LEVEL_INFO);
+    // LogComponentEnable("MobilityHelper", LOG_LEVEL_INFO);
 
     NodeContainer enbNodes;
     enbNodes.Create(4);
@@ -57,7 +70,7 @@ main(int argc, char* argv[])
         }
         k += 10;
     }
-    
+
     Simulator::Stop(Seconds(30));
     Simulator::Run();
     Simulator::Destroy();
