@@ -21,6 +21,15 @@ int main(int argc, char *argv[])
 
     ueMobility.Install(ueNodes);
 
+    MobilityHelper enbMobility;
+    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+    positionAlloc->Add(Vector(0.0, 0.0, 0.0));
+    positionAlloc->Add(Vector(5000.0, 0.0, 0.0));
+    positionAlloc->Add(Vector(0.0, 5000.0, 0.0));
+    positionAlloc->Add(Vector(5000.0, 5000.0, 0.0));
+    enbMobility.SetPositionAllocator(positionAlloc);
+    enbMobility.Install(enbNodes);
+
 
     /*Above instances at this point still don't have an LTE protocol stack installed, they
     are just empty nodes*/
@@ -33,7 +42,7 @@ int main(int argc, char *argv[])
 
     for(int i=0;i<4;i++)
     {
-        ll k=0;
+        int k=0;
         for(int j=0;j<10;j++)
         {
             lteHelper->Attach(ueDevs.Get(j+k),enbDevs.Get(i)); //Attach 10 UEs per eNB
@@ -42,8 +51,6 @@ int main(int argc, char *argv[])
         }
         k+=10;
     }
-
-    
 
     for(int i=0;i<4;i++)
     {
