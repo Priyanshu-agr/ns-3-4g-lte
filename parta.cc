@@ -6,13 +6,20 @@
 #include <ns3/netanim-module.h>
 #include <ns3/point-to-point-module.h>
 #include <ns3/internet-stack-helper.h>
+#include <ns3/ipv4-static-routing-helper.h>
+#include <ns3/flow-monitor.h>
+#include <ns3/flow-monitor-helper.h>
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("LteLogComponent");
 
-int
-main(int argc, char* argv[])
+void UEsConnectionStatus(std::string context, uint64_t imsi, uint16_t cellId, uint16_t rnti)
+{
+    std::cout << context << " UE IMSI " << imsi << " connected to cellId " << cellId << " with rnti " << rnti << "Time:" << Simulator::Now() << std::endl;
+}
+
+int main(int argc, char *argv[])
 {
     // NS_LOG_INFO("Starting LTE simulation");
 
@@ -21,8 +28,8 @@ main(int argc, char* argv[])
 
     // NS_LOG_INFO("Creating Topology");
     // LogComponentEnableAll(LOG_LEVEL_INFO);
-    LogComponentEnable("LteEnbRrc", LOG_LEVEL_INFO);
-    LogComponentEnable("LteEnbNetDevice", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteEnbRrc", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteEnbNetDevice", LOG_LEVEL_INFO);
     // LogComponentEnable("LteUeRrc", LOG_LEVEL_INFO);
     // LogComponentEnable("LteEnbPhy", LOG_LEVEL_INFO);
     // LogComponentEnable("LteRlc", LOG_LEVEL_INFO);
@@ -40,6 +47,10 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(40));
     Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(20));
 
+    Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
+                       BooleanValue(true));
+    Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled",
+                       BooleanValue(true));
 
     uint8_t RBs = 50;
     lteHelper->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(RBs));
@@ -72,9 +83,9 @@ main(int argc, char* argv[])
     NetDeviceContainer ueDevs;
     ueDevs = lteHelper->InstallUeDevice(ueNodes); // Install an LTE protocol stack on the UEs
 
+    int k = 0;
     for (int i = 0; i < 4; i++)
     {
-        int k = 0;
         for (int j = 0; j < 10; j++)
         {
             lteHelper->Attach(ueDevs.Get(j + k), enbDevs.Get(i)); // Attach 10 UEs per eNB
@@ -88,7 +99,7 @@ main(int argc, char* argv[])
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
     lteHelper->SetEpcHelper(epcHelper);
 
-    //Pgw node
+    // Pgw node
     Ptr<Node> pgw = epcHelper->GetPgwNode();
 
     // Making internet node to connect with pgw
@@ -102,8 +113,43 @@ main(int argc, char* argv[])
     p2p.SetChannelAttribute("Delay", TimeValue(MilliSeconds(5)));
     NetDeviceContainer internetDevices = p2p.Install(pgw, internetNode.Get(0));
 
+    // to exchange traffic between internet and LTE network
+    Ipv4AddressHelper ip;
+    ip.SetBase("1.0.0.0", "255.0.0.0");
+    Ipv4InterfaceContainer interfaces = ip.Assign(internetDevices);
+    // Ipv4Address internetHostAddr = interfaces.GetAddress(1);
+    Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    Ptr<Ipv4StaticRouting> internetHostRouting = ipv4RoutingHelper.GetStaticRouting(internetNode.Get(0)->GetObject<Ipv4>());
+    internetHostRouting->AddNetworkRouteTo(epcHelper->GetUeDefaultGatewayAddress(), Ipv4Mask("255.0.0.0"), 1); // epcHelper->___ ??
+
+    // setting up ue now
+    InternetStackHelper internetUe;
+    internetUe.Install(ueNodes);
+    for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
+    {
+        Ptr<Node> ueNode = ueNodes.Get(u);
+        Ptr<NetDevice> ueLteDevice = ueDevs.Get(u);
+        Ipv4InterfaceContainer ueIpIface;
+        ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueLteDevice));
+        Ptr<Ipv4StaticRouting> ueStaticRouting;
+        ueStaticRouting = ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+        ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
+    }
+
+    //trace tracking
+    lteHelper->EnableTraces();
+    Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/ConnectionEstablished",
+                    MakeCallback(&UEsConnectionStatus));
+
+    //Flow monitor
+    Ptr<FlowMonitor> flowmon;
+    FlowMonitorHelper flowmonHelper;
+    flowmon = flowmonHelper.InstallAll();
+    
+
     Simulator::Stop(Seconds(30));
     Simulator::Run();
+    flowmon->SerializeToXmlFile("lte_flowmon.xml", true, true);
     Simulator::Destroy();
     return 0;
 }
