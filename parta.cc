@@ -3,6 +3,9 @@
 #include <ns3/mobility-module.h>
 #include <ns3/network-module.h>
 // #include <ns3/net-device-container.h>
+#include <ns3/netanim-module.h>
+#include <ns3/point-to-point-module.h>
+#include <ns3/internet-stack-helper.h>
 
 using namespace ns3;
 
@@ -19,7 +22,7 @@ main(int argc, char* argv[])
     // NS_LOG_INFO("Creating Topology");
     // LogComponentEnableAll(LOG_LEVEL_INFO);
     LogComponentEnable("LteEnbRrc", LOG_LEVEL_INFO);
-    // LogComponentEnable("LteEnbNetDevice", LOG_LEVEL_INFO);
+    LogComponentEnable("LteEnbNetDevice", LOG_LEVEL_INFO);
     // LogComponentEnable("LteUeRrc", LOG_LEVEL_INFO);
     // LogComponentEnable("LteEnbPhy", LOG_LEVEL_INFO);
     // LogComponentEnable("LteRlc", LOG_LEVEL_INFO);
@@ -27,14 +30,24 @@ main(int argc, char* argv[])
 
     NodeContainer enbNodes;
     enbNodes.Create(4);
+
+    PointToPointHelper pointToPoint;
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+
     NodeContainer ueNodes;
     ueNodes.Create(40);
 
-    Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(30));
+    Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(40));
+    Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(20));
 
-    int RBs = 50;
+
+    uint8_t RBs = 50;
     lteHelper->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(RBs));
     lteHelper->SetEnbDeviceAttribute("UlBandwidth", UintegerValue(RBs));
+
+    // Set operating frequency
+    lteHelper->SetEnbDeviceAttribute("DlEarfcn", UintegerValue(100));
+    lteHelper->SetEnbDeviceAttribute("UlEarfcn", UintegerValue(18100));
 
     MobilityHelper ueMobility;
     ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel");
@@ -70,6 +83,24 @@ main(int argc, char* argv[])
         }
         k += 10;
     }
+
+    // LTE EPC setup
+    Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
+    lteHelper->SetEpcHelper(epcHelper);
+
+    //Pgw node
+    Ptr<Node> pgw = epcHelper->GetPgwNode();
+
+    // Making internet node to connect with pgw
+    NodeContainer internetNode;
+    internetNode.Create(1);
+    InternetStackHelper internet;
+    internet.Install(internetNode);
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute("DataRate", StringValue("1Gbps"));
+    p2p.SetDeviceAttribute("Mtu", UintegerValue(1500));
+    p2p.SetChannelAttribute("Delay", TimeValue(MilliSeconds(5)));
+    NetDeviceContainer internetDevices = p2p.Install(pgw, internetNode.Get(0));
 
     Simulator::Stop(Seconds(30));
     Simulator::Run();
