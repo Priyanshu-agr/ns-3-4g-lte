@@ -72,7 +72,21 @@ int main(int argc, char *argv[])
     positionAlloc->Add(Vector(0.0, 5000.0, 0.0));
     positionAlloc->Add(Vector(5000.0, 5000.0, 0.0));
     enbMobility.SetPositionAllocator(positionAlloc);
+
+    // Scheduling
+    lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
+
+    //Handover
+    lteHelper->SetHandoverAlgorithmType("ns3::A2A4RsrqHandoverAlgorithm");
+    lteHelper->SetHandoverAlgorithmAttribute("ServingCellThreshold", UintegerValue(30));
+    lteHelper->SetHandoverAlgorithmAttribute("NeighbourCellOffset", UintegerValue(1));
+
+    //interference management
+    lteHelper->SetFfrAlgorithmType("ns3::LteFrHardAlgorithm");
     enbMobility.Install(enbNodes);
+
+    //pathloss model
+    lteHelper->SetAttribute("PathlossModel", StringValue("ns3::FriisSpectrumPropagationLossModel"));
 
     /*Above instances at this point still don't have an LTE protocol stack installed, they
     are just empty nodes*/
@@ -94,6 +108,24 @@ int main(int argc, char *argv[])
         }
         k += 10;
     }
+
+    // EPS Bearer actvation
+    EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
+    EpsBearer bearer(q);
+    lteHelper->ActivateDataRadioBearer(ueDevs, bearer);
+
+    // Configure Radio Environment Map (REM) output
+    // for LTE-only simulations always use /ChannelList/0 which is the downlink channel
+    Ptr<RadioEnvironmentMapHelper> remHelper = CreateObject<RadioEnvironmentMapHelper>();
+    remHelper->SetAttribute("ChannelPath", StringValue("/ChannelList/0"));
+    remHelper->SetAttribute("OutputFile", StringValue("rem.out"));
+    remHelper->SetAttribute("XMin", DoubleValue(-3000.0));
+    remHelper->SetAttribute("XMax", DoubleValue(7000.0));
+    remHelper->SetAttribute("YMin", DoubleValue(-3000.0));
+    remHelper->SetAttribute("YMax", DoubleValue(7000.0));
+    remHelper->SetAttribute("Z", DoubleValue(0.0));
+    remHelper->Install();
+
 
     // LTE EPC setup
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
@@ -149,7 +181,7 @@ int main(int argc, char *argv[])
 
     Simulator::Stop(Seconds(30));
     Simulator::Run();
-    flowmon->SerializeToXmlFile("lte_flowmon.xml", true, true);
+    flowmon->SerializeToXmlFile("/home/tusharc/lte_flowmon.xml", true, true);
     Simulator::Destroy();
     return 0;
 }
