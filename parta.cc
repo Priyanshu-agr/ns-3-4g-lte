@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 
     Simulator::Stop(Seconds(30));
     Simulator::Run();
-    flowmon->SerializeToXmlFile("/home/tusharc/lte_flowmon.xml", true, true);
+    flowmon->SerializeToXmlFile("lte_flowmon.xml", true, true);
     Simulator::Destroy();
     return 0;
 }
