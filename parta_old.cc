@@ -3,16 +3,16 @@
 #include <ns3/mobility-module.h>
 #include <ns3/network-module.h>
 // #include <ns3/net-device-container.h>
-#include <ns3/netanim-module.h>
-#include <ns3/point-to-point-module.h>
-#include <ns3/internet-stack-helper.h>
-#include <ns3/ipv4-static-routing-helper.h>
-#include <ns3/flow-monitor.h>
-#include <ns3/flow-monitor-helper.h>
-#include <ns3/udp-client-server-helper.h>
-#include <ns3/packet-sink-helper.h>
 #include "ns3/applications-module.h"
 #include "ns3/netanim-module.h"
+#include <ns3/flow-monitor-helper.h>
+#include <ns3/flow-monitor.h>
+#include <ns3/internet-stack-helper.h>
+#include <ns3/ipv4-static-routing-helper.h>
+#include <ns3/netanim-module.h>
+#include <ns3/packet-sink-helper.h>
+#include <ns3/point-to-point-module.h>
+#include <ns3/udp-client-server-helper.h>
 
 using namespace ns3;
 
@@ -127,7 +127,7 @@ NotifyHandoverEndOkEnb(std::string context, uint64_t imsi, uint16_t cellid, uint
  * \param context The context.
  * \param imsi The IMSI of the connected terminal.
  * \param cellid The Cell ID.
- * \param rnti The RNTI.
+ * \param rnti The RNTI.    
  */
 void
 NotifyHandoverFailure(std::string context, uint64_t imsi, uint16_t cellid, uint16_t rnti)
@@ -136,12 +136,10 @@ NotifyHandoverFailure(std::string context, uint64_t imsi, uint16_t cellid, uint1
               << " IMSI " << imsi << " RNTI " << rnti << " handover failure" << std::endl;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char* argv[])
 {
     // NS_LOG_INFO("Starting LTE simulation");
-
-    // LteHelper provides the methods to add eNBs and UEs and configure them
-    Ptr<LteHelper> lteHelper = CreateObject<LteHelper>(); // Create an LteHelper object
 
     // NS_LOG_INFO("Creating Topology");
     // LogComponentEnableAll(LOG_LEVEL_INFO);
@@ -157,59 +155,33 @@ int main(int argc, char *argv[])
     PointToPointHelper pointToPoint;
     pointToPoint.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
 
-
-    Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(40));
     Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(20));
 
-    Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
-                       BooleanValue(true));
-    Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled",
-                       BooleanValue(true));
-
-    // LTE EPC setup
-    Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
-    lteHelper->SetEpcHelper(epcHelper);
+    Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue(true));
+    Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue(true));
 
     // Scheduling
     lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
 
-    //Handover
+    // Handover
     lteHelper->SetHandoverAlgorithmType("ns3::A2A4RsrqHandoverAlgorithm");
     lteHelper->SetHandoverAlgorithmAttribute("ServingCellThreshold", UintegerValue(30));
     lteHelper->SetHandoverAlgorithmAttribute("NeighbourCellOffset", UintegerValue(1));
-    
+
     // Set operating frequency
     lteHelper->SetEnbDeviceAttribute("DlEarfcn", UintegerValue(100));
     lteHelper->SetEnbDeviceAttribute("UlEarfcn", UintegerValue(18100));
 
-    uint8_t RBs = 50;
-    lteHelper->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(RBs));
-    lteHelper->SetEnbDeviceAttribute("UlBandwidth", UintegerValue(RBs));
-
-    //pathloss model
-    // lteHelper->SetAttribute("PathlossModel", StringValue("ns3::FriisSpectrumPropagationLossModel"));
+    // pathloss model
+    //  lteHelper->SetAttribute("PathlossModel",
+    //  StringValue("ns3::FriisSpectrumPropagationLossModel"));
 
     // EPS Bearer actvation
     // EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
     // EpsBearer bearer(q);
     // lteHelper->ActivateDataRadioBearer(ueDevs, bearer);
 
-    // Pgw node
-    Ptr<Node> pgw = epcHelper->GetPgwNode();
-
-    // Create single remote host
-    NodeContainer remoteHostContainer;
-    remoteHostContainer.Create(1);
-    Ptr<Node> remoteHost = remoteHostContainer.Get(0);
-    InternetStackHelper internet;
-    internet.Install(remoteHostContainer);
-
     // Creating internet
-    PointToPointHelper p2p;
-    p2p.SetDeviceAttribute("DataRate", StringValue("1Gbps"));
-    p2p.SetDeviceAttribute("Mtu", UintegerValue(1500));
-    p2p.SetChannelAttribute("Delay", TimeValue(MilliSeconds(5)));
-    NetDeviceContainer internetDevices = p2p.Install(pgw, remoteHost);
 
     // to exchange traffic between internet and LTE network
     Ipv4AddressHelper ipv4h;
@@ -219,47 +191,19 @@ int main(int argc, char *argv[])
 
     // Routing of internet host towards lte network
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
-    Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
-    remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1); // interface 0 is localhost, 1 is p2p device
+    Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
+        ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
+    remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"),
+                                               Ipv4Mask("255.0.0.0"),
+                                               1); // interface 0 is localhost, 1 is p2p device
 
-    uint32_t numberOfUes = 40;
-    uint32_t numberOfEnbs = 4;
     uint32_t numBearersPerUe = 1;
     Time simTime = MilliSeconds(490);
     bool disableDl = false;
     bool disableUl = false;
 
-    // Creating Nodes
-    NodeContainer enbNodes;
-    enbNodes.Create(numberOfEnbs);
-
-    NodeContainer ueNodes;
-    ueNodes.Create(numberOfUes);
-
-    // Mobility model adddition
-    MobilityHelper ueMobility;
-    ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel");
-    ueMobility.Install(ueNodes);
-
-
-    //interference management
-    // lteHelper->SetFfrAlgorithmType("ns3::LteFrHardAlgorithm");
-
-    // Set the position of the eNBs as a sqaure with sides 5km
-    MobilityHelper enbMobility;
-    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-    positionAlloc->Add(Vector(0.0, 0.0, 0.0));
-    positionAlloc->Add(Vector(5000.0, 0.0, 0.0));
-    positionAlloc->Add(Vector(0.0, 5000.0, 0.0));
-    positionAlloc->Add(Vector(5000.0, 5000.0, 0.0));
-    enbMobility.SetPositionAllocator(positionAlloc);
-    enbMobility.Install(enbNodes);
-
-    // Installing LTE devices in eNB and UE
-    NetDeviceContainer enbDevs;
-    enbDevs = lteHelper->InstallEnbDevice(enbNodes); // Install an LTE protocol stack on the eNbs
-    NetDeviceContainer ueDevs;
-    ueDevs = lteHelper->InstallUeDevice(ueNodes); // Install an LTE protocol stack on the UEs
+    // interference management
+    //  lteHelper->SetFfrAlgorithmType("ns3::LteFrHardAlgorithm");
 
     // IP stack on UE
     InternetStackHelper internetUe;
@@ -277,20 +221,6 @@ int main(int argc, char *argv[])
     //     ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     // }
 
-
-    // Attach uenodes to enb
-    int k = 0;
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 10; j++)
-        {
-            lteHelper->Attach(ueDevs.Get(j + k), enbDevs.Get(i)); // Attach 10 UEs per eNB
-            /*This will configure each UE according to the eNB configuration, and create
-            an RRC connection between them*/
-        }
-        k += 10;
-    }
-
     // Install and start applications on UEs and remote host
     uint16_t dlPort = 10000;
     uint16_t ulPort = 20000;
@@ -301,7 +231,6 @@ int main(int argc, char *argv[])
     Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable>();
     startTimeSeconds->SetAttribute("Min", DoubleValue(0.05));
     startTimeSeconds->SetAttribute("Max", DoubleValue(0.06));
-
 
     for (uint32_t u = 0; u < numberOfUes; ++u)
     {
@@ -376,8 +305,7 @@ int main(int argc, char *argv[])
     // remHelper->SetAttribute("Z", DoubleValue(0.0));
     // remHelper->Install();
 
-
-    //trace tracking
+    // trace tracking
     lteHelper->EnableTraces();
     Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats();
     rlcStats->SetAttribute("EpochDuration", TimeValue(Seconds(0.05)));
@@ -408,16 +336,13 @@ int main(int argc, char *argv[])
     Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverFailureJoining",
                     MakeCallback(&NotifyHandoverFailure));
 
-    //Flow monitor
+    // Flow monitor
     Ptr<FlowMonitor> flowmon;
     FlowMonitorHelper flowmonHelper;
     flowmon = flowmonHelper.InstallAll();
-    
+
     AnimationInterface anim("lte.xml");
 
     Simulator::Stop(simTime + Seconds(1));
-    Simulator::Run();
     flowmon->SerializeToXmlFile("/home/tusharc/lte_flowmon.xml", true, true);
-    Simulator::Destroy();
-    return 0;
 }
