@@ -86,8 +86,8 @@ int main(int argc, char *argv[])
     // LogComponentEnable("EpcMmeApplication", logLevel);
     // LogComponentEnable("EpcPgwApplication", logLevel);
     // LogComponentEnable("EpcSgwApplication", logLevel);
-    // LogComponentEnable("LteEnbRrc", logLevel);
-    // LogComponentEnable("LteUeRrc", logLevel);
+    LogComponentEnable("LteEnbRrc", logLevel);
+    LogComponentEnable("LteUeRrc", logLevel);
 
     // Generating LTE Helper and adding epcHelper to it
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
@@ -201,29 +201,29 @@ int main(int argc, char *argv[])
     // Create Devices and install them in nodes enb and ue
     NetDeviceContainer enbDevs;
     NetDeviceContainer ueDevs;
-    lteHelper->SetSchedulerType("ns3::PfFfMacScheduler");
+    lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
     lteHelper->SetSchedulerAttribute("HarqEnabled", BooleanValue(true));
 
     lteHelper->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(bandwidth));
     lteHelper->SetEnbDeviceAttribute("UlBandwidth", UintegerValue(bandwidth));
 
-    // TBU
-    lteHelper->SetFfrAlgorithmType("ns3::LteFfrDistributedAlgorithm");
-    lteHelper->SetFfrAlgorithmAttribute("CalculationInterval", TimeValue(MilliSeconds(200)));
-    lteHelper->SetFfrAlgorithmAttribute("RsrpDifferenceThreshold", UintegerValue(5));
-    lteHelper->SetFfrAlgorithmAttribute("RsrqThreshold", UintegerValue(25));
-    lteHelper->SetFfrAlgorithmAttribute("EdgeRbNum", UintegerValue(6));
-    lteHelper->SetFfrAlgorithmAttribute("CenterPowerOffset",
-                                        UintegerValue(LteRrcSap::PdschConfigDedicated::dB_3));
-    lteHelper->SetFfrAlgorithmAttribute("EdgePowerOffset",
-                                        UintegerValue(LteRrcSap::PdschConfigDedicated::dB3));
+    // // TBU
+    // lteHelper->SetFfrAlgorithmType("ns3::LteFfrDistributedAlgorithm");
+    // lteHelper->SetFfrAlgorithmAttribute("CalculationInterval", TimeValue(MilliSeconds(200)));
+    // lteHelper->SetFfrAlgorithmAttribute("RsrpDifferenceThreshold", UintegerValue(5));
+    // lteHelper->SetFfrAlgorithmAttribute("RsrqThreshold", UintegerValue(25));
+    // lteHelper->SetFfrAlgorithmAttribute("EdgeRbNum", UintegerValue(6));
+    // lteHelper->SetFfrAlgorithmAttribute("CenterPowerOffset",
+    //                                     UintegerValue(LteRrcSap::PdschConfigDedicated::dB_3));
+    // lteHelper->SetFfrAlgorithmAttribute("EdgePowerOffset",
+    //                                     UintegerValue(LteRrcSap::PdschConfigDedicated::dB3));
 
-    lteHelper->SetFfrAlgorithmAttribute("CenterAreaTpc", UintegerValue(0));
-    lteHelper->SetFfrAlgorithmAttribute("EdgeAreaTpc", UintegerValue(3));
+    // lteHelper->SetFfrAlgorithmAttribute("CenterAreaTpc", UintegerValue(0));
+    // lteHelper->SetFfrAlgorithmAttribute("EdgeAreaTpc", UintegerValue(3));
     // TBU
 
     // ns3::LteFfrDistributedAlgorithm works with Absolute Mode Uplink Power Control
-    Config::SetDefault("ns3::LteUePowerControl::AccumulationEnabled", BooleanValue(false));
+    // Config::SetDefault("ns3::LteUePowerControl::AccumulationEnabled", BooleanValue(false));
 
     enbDevs = lteHelper->InstallEnbDevice(enbNodes);
     ueDevs = lteHelper->InstallUeDevice(ueNodes);
@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
 
     bool firstWrite = true;
     std::string rrcType = useIdealRrc ? "ideal_rrc" : "real_rrc";
-    std::string fileName = "rlf_dl_thrput_" + std::to_string(enbNodes.GetN()) + "_eNB_" + rrcType;
+    std::string fileName = "rlf_dl_thrput_speed_10_RrFfMacScheduler_" + std::to_string(enbNodes.GetN()) + "_eNB_" + rrcType;
     Time binSize = Seconds(0.2);
     Simulator::Schedule(Seconds(0.47), &Throughput, firstWrite, binSize, fileName);
 
