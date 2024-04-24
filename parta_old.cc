@@ -181,13 +181,7 @@ main(int argc, char* argv[])
     // EpsBearer bearer(q);
     // lteHelper->ActivateDataRadioBearer(ueDevs, bearer);
 
-    // Creating internet
 
-    // to exchange traffic between internet and LTE network
-    Ipv4AddressHelper ipv4h;
-    ipv4h.SetBase("1.0.0.0", "255.0.0.0");
-    Ipv4InterfaceContainer internetIpInterface = ipv4h.Assign(internetDevices);
-    Ipv4Address remoteHostAddr = internetIpInterface.GetAddress(1);
 
     // Routing of internet host towards lte network
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
@@ -205,11 +199,7 @@ main(int argc, char* argv[])
     // interference management
     //  lteHelper->SetFfrAlgorithmType("ns3::LteFrHardAlgorithm");
 
-    // IP stack on UE
-    InternetStackHelper internetUe;
-    internetUe.Install(ueNodes);
-    Ipv4InterfaceContainer ueIpIfaces;
-    ueIpIfaces = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+
     // for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     // {
     //     Ptr<Node> ueNode = ueNodes.Get(u);

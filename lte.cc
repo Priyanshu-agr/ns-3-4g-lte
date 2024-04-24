@@ -84,7 +84,7 @@ main(int argc, const char* argv[])
     InternetStackHelper internetUe;
     internetUe.Install(ueNodes);
     Ipv4InterfaceContainer ueIpIfaces;
-    ueIpIfaces = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));    
+    ueIpIfaces = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));            
 
     // Attach uenodes to enb
     int k = 0;
