@@ -173,13 +173,14 @@ int main(int argc, char *argv[])
                                         DoubleValue(enbPosition.y),
                                         "rho",
                                         DoubleValue(500.0));
-        ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-                                    "Bounds",
-                                    StringValue("-500|5500|-500|5500"),
-                                    // "Bounds",
-                                    // RectangleValue(Rectangle(-500, 500, -500, 500)),
-                                    "Speed",
-                                    StringValue("ns3::ConstantRandomVariable[Constant=10.0]"));
+        // ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+        //                             "Bounds",
+        //                             StringValue("-500|5500|-500|5500"),
+        //                             // "Bounds",
+        //                             // RectangleValue(Rectangle(-500, 500, -500, 500)),
+        //                             "Speed",
+        //                             StringValue("ns3::ConstantRandomVariable[Constant=10.0]"));
+        ueMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
         if (i == 0)
         {
             ueMobility.Install(ueGroup1);
@@ -329,7 +330,7 @@ int main(int argc, char *argv[])
 
     bool firstWrite = true;
     std::string rrcType = useIdealRrc ? "ideal_rrc" : "real_rrc";
-    std::string fileName = "rlf_dl_thrput_speed_10_RrFfMacScheduler_" + std::to_string(enbNodes.GetN()) + "_eNB_" + rrcType;
+    std::string fileName = "rlf_dl_thrput_speed_0_RrFfMacScheduler_" + std::to_string(enbNodes.GetN()) + "_eNB_" + rrcType;
     Time binSize = Seconds(0.2);
     Simulator::Schedule(Seconds(0.47), &Throughput, firstWrite, binSize, fileName);
 
