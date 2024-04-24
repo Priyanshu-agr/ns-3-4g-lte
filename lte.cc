@@ -2,8 +2,7 @@
 #include <ns3/internet-module.h>
 #include <ns3/lte-module.h>
 #include <ns3/mobility-helper.h>
-
-#include <point-to-point-helper.h>
+#include <ns3/point-to-point-helper.h>
 
 using namespace ns3;
 
@@ -74,6 +73,18 @@ main(int argc, const char* argv[])
     p2p.SetDeviceAttribute("Mtu", UintegerValue(1500));
     p2p.SetChannelAttribute("Delay", TimeValue(MilliSeconds(5)));
     NetDeviceContainer internetDevices = p2p.Install(pgw, remoteHost);
+
+    // To exchange traffic between internet and LTE network
+    Ipv4AddressHelper ipv4h;
+    ipv4h.SetBase("1.0.0.0", "255.0.0.0");
+    Ipv4InterfaceContainer internetIpInterface = ipv4h.Assign(internetDevices);
+    Ipv4Address remoteHostAddr = internetIpInterface.GetAddress(1);
+
+    // IP stack on UE
+    InternetStackHelper internetUe;
+    internetUe.Install(ueNodes);
+    Ipv4InterfaceContainer ueIpIfaces;
+    ueIpIfaces = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));            
 
     // Attach uenodes to enb
     int k = 0;
