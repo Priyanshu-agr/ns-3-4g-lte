@@ -1,13 +1,13 @@
-#include "ns3/applications-module.h"
 #include "ns3/core-module.h"
-#include "ns3/flow-monitor-helper.h"
-#include "ns3/internet-module.h"
-#include "ns3/log.h"
 #include "ns3/lte-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/network-module.h"
-#include "ns3/point-to-point-epc-helper.h"
+#include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
+#include "ns3/point-to-point-epc-helper.h"
+#include "ns3/mobility-module.h"
+#include "ns3/applications-module.h"
+// #include "ns3/log.h"
+#include "ns3/network-module.h"
+#include "ns3/flow-monitor-module.h"
 // #include "ns3/netanim-module.h"
 
 using namespace ns3;
@@ -20,8 +20,7 @@ uint32_t oldByteCounter = 0; //!< Old Byte counter,
  *
  * \param packet The packet.
  */
-void
-ReceivePacket(Ptr<const Packet> packet, const Address&)
+void ReceivePacket(Ptr<const Packet> packet, const Address &)
 {
     ByteCounter += packet->GetSize();
 }
@@ -33,8 +32,7 @@ ReceivePacket(Ptr<const Packet> packet, const Address&)
  * \param binSize Bin size.
  * \param fileName Output filename.
  */
-void
-Throughput(bool firstWrite, Time binSize, std::string fileName)
+void Throughput(bool firstWrite, Time binSize, std::string fileName)
 {
     std::ofstream output;
 
@@ -51,13 +49,7 @@ Throughput(bool firstWrite, Time binSize, std::string fileName)
     // Instantaneous throughput every 200 ms
 
     double throughput = (ByteCounter - oldByteCounter) * 8 / binSize.GetSeconds() / 1024 / 1024;
-    double s = throughput / 50;
-    Ptr<LteAmc> amc = CreateObject<LteAmc>();
-    // double s = log2(1 + (std::pow(10, minSinr / 10) / ((-std::log(5.0 * 0.00005)) / 1.5)));
-    int cqi = amc->GetCqiFromSpectralEfficiency(s);
-    int mcs = amc->GetMcsFromCqi(cqi);
-    output << Simulator::Now().As(Time::S) << " " << throughput << " " << mcs << std::endl;
-
+    output << Simulator::Now().As(Time::S) << " " << throughput << std::endl;
     oldByteCounter = ByteCounter;
     Simulator::Schedule(binSize, &Throughput, firstWrite, binSize, fileName);
 }
@@ -77,121 +69,25 @@ CourseChange(std::string context, Ptr<const MobilityModel> mobility)
               << ", z=" << vel.z << std::endl;
 }
 
-/**
- * @brief Get the Sinr and throuhgput object
- *
- * @param node
- * @param fileName
- * @param firstWrite
- * @param ltehelper
- */
-void
-getSinr(Ptr<Node> node, std::string fileName, bool firstWrite, Ptr<LteHelper> ltehelper)
+int main(int argc, char *argv[])
 {
-    std::ofstream output;
-
-    if (firstWrite)
-    {
-        output.open(fileName, std::ofstream::out);
-        output << "Time"
-               << "\t"
-               << "Node"
-               << "\t"
-               << "sinr"
-               << "\t"
-               << "throughput" << std::endl;
-        firstWrite = false;
-    }
-    else
-    {
-        output.open(fileName, std::ofstream::app);
-    }
-
-    double throughput = (ByteCounter - oldByteCounter) * 8 / 0.2 / 1024 / 1024;
-
-    Ptr<PhyStatsCalculator> phyStats = ltehelper->m_phyStats;
-
-    Ptr<LteUeNetDevice> ueNetDevice = node->GetDevice(0)->GetObject<LteUeNetDevice>();
-    uint64_t imsi = ueNetDevice->GetImsi();
-
-    double sinr = phyStats->GetSinrForImsi(imsi);
-
-    output << Simulator::Now().As(Time::S) << "\t" << node->GetId() << "\t" << sinr << "\t"
-           << throughput << std::endl;
-    std::cout << Simulator::Now().As(Time::S) << "\t" << node->GetId() << "\t" << sinr << "\t"
-              << throughput << std::endl;
-
-    oldByteCounter = ByteCounter;
-
-    Simulator::Schedule(Seconds(0.2), &getSinr, node, fileName, firstWrite, ltehelper);
-}
-
-void
-getMcs(NodeContainer nodes, std::string fileName, bool firstWrite, Ptr<LteHelper> ltehelper)
-{
-    std::ofstream output;
-
-    if (firstWrite)
-    {
-        output.open(fileName, std::ofstream::out);
-        output << "Time"
-               << "\t"
-               << "Node"
-               << "\t"
-               << "x"
-               << "\t"
-               << "y"
-               << "\t"
-               << "z"
-               << "\t"
-               << "mcs" << std::endl;
-        firstWrite = false;
-    }
-    else
-    {
-        output.open(fileName, std::ofstream::app);
-    }
-
-    for (NodeContainer::Iterator it = nodes.Begin(); it != nodes.End(); ++it)
-    {
-        Ptr<Node> node = *it;
-        Ptr<MobilityModel> mobility = node->GetObject<MobilityModel>();
-        Vector pos = mobility->GetPosition();
-        Ptr<PhyRxStatsCalculator> phyRxStats = ltehelper->m_phyRxStats;
-
-        Ptr<LteUeNetDevice> ueNetDevice = node->GetDevice(0)->GetObject<LteUeNetDevice>();
-        uint64_t imsi = ueNetDevice->GetImsi();
-
-        uint32_t mcs = phyRxStats->GetMcsForImsi(imsi);
-
-        output << Simulator::Now().As(Time::S) << "\t" << node->GetId() << "\t" << pos.x << "\t"
-               << pos.y << "\t" << pos.z << "\t" << mcs << std::endl;
-        std::cout << Simulator::Now().As(Time::S) << "Node " << node->GetId() << ": x=" << pos.x
-                  << ", y=" << pos.y << ", z=" << pos.z << ", MCS=" << mcs << std::endl;
-    }
-
-    Simulator::Schedule(Seconds(0.2), &getMcs, nodes, fileName, firstWrite, ltehelper);
-}
-
-int
-main(int argc, char* argv[])
-{
-    // Config::SetDefault("ns3::PhyRxStatsCalculator::DlRxOutputFilename",
-    //                    StringValue("DlRxPhyStats_Mine.txt"));
-
     uint32_t numOfUEs = 40;
     double simTime = 30.000;
     uint16_t bandwidth = 50;
     bool useIdealRrc = true;
-    bool mobileUE = false;
+    std::string outputDir = "./";
+    std::string simTag = "new-lte-copy";
+    double udpPacketSize = 1500;
     std::string schedulerType = "PF";
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("SchedulerType", "Scheduler Type PF,RR,PSS,MT", schedulerType);
-    cmd.AddValue("MobileUE", "Mobile UE boolean", mobileUE);
     cmd.Parse(argc, argv);
 
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(40));
+
+    RngSeedManager::SetSeed(3);
+    RngSeedManager::SetRun(33);
 
     // Enable Logging
     auto logLevel = (LogLevel)(LOG_PREFIX_FUNC | LOG_PREFIX_TIME | LOG_LEVEL_ALL);
@@ -233,8 +129,7 @@ main(int argc, char* argv[])
 
     // Routing Internet towards LTE n/w
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
-    Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
-        ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
+    Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     // interface 0 is localhost, 1 is the p2p device
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
@@ -251,12 +146,12 @@ main(int argc, char* argv[])
     enbPositionAlloc->Add(Vector(0.0, 5000.0, 0.0));
     enbPositionAlloc->Add(Vector(5000.0, 5000.0, 0.0));
     MobilityHelper enbMobility;
-    // eNB always stays stationary
     enbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     enbMobility.SetPositionAllocator(enbPositionAlloc);
     enbMobility.Install(enbNodes);
 
     NodeContainer ueGroup1, ueGroup2, ueGroup3, ueGroup4;
+
     for (uint32_t i = 0; i < numOfUEs; i++)
     {
         if (i < 10)
@@ -278,7 +173,7 @@ main(int argc, char* argv[])
     }
 
     // Mobility model for ue
-    // UE groups so that we can set the position for the UEs according to the 4 eNBs using the uniform disc allocator
+
     for (uint32_t i = 0; i < 4; i++)
     {
         Vector enbPosition = enbNodes.Get(i)->GetObject<MobilityModel>()->GetPosition();
@@ -290,19 +185,14 @@ main(int argc, char* argv[])
                                         DoubleValue(enbPosition.y),
                                         "rho",
                                         DoubleValue(500.0));
-        if (mobileUE)
-        {
-            // Random 2d walk for the UE Nodes with a speed of 10
-            ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-                                        "Bounds",
-                                        StringValue("-500|5500|-500|5500"),
-                                        "Speed",
-                                        StringValue("ns3::ConstantRandomVariable[Constant=10.0]"));
-        }
-        else
-        {
-            ueMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-        }
+        // ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+        //                             "Bounds",
+        //                             StringValue("-500|5500|-500|5500"),
+        //                             // "Bounds",
+        //                             // RectangleValue(Rectangle(-500, 500, -500, 500)),
+        //                             "Speed",
+        //                             StringValue("ns3::ConstantRandomVariable[Constant=10.0]"));
+        ueMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
         if (i == 0)
         {
             ueMobility.Install(ueGroup1);
@@ -324,21 +214,28 @@ main(int argc, char* argv[])
     // Create Devices and install them in nodes enb and ue
     NetDeviceContainer enbDevs;
     NetDeviceContainer ueDevs;
-    if (schedulerType == "PF")
+
+    std::cout<< schedulerType << std::endl;
+
+    if(schedulerType == "PF")
     {
         lteHelper->SetSchedulerType("ns3::PfFfMacScheduler");
+        std::cout << "PF" << std::endl;
     }
     else if (schedulerType == "RR")
     {
         lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
+        std::cout << "RR" << std::endl;
     }
-    else if (schedulerType == "PSS")
+    else if(schedulerType == "PSS")
     {
         lteHelper->SetSchedulerType("ns3::PssFfMacScheduler");
+        std::cout << "PSS" << std::endl;
     }
     else
     {
         lteHelper->SetSchedulerType("ns3::TdMtFfMacScheduler");
+        std::cout << "MT" << std::endl;
     }
 
     lteHelper->SetSchedulerAttribute("HarqEnabled", BooleanValue(true));
@@ -377,10 +274,14 @@ main(int argc, char* argv[])
 
     // Attach UEs to the closest eNB
     lteHelper->AttachToClosestEnb(ueDevs, enbDevs);
+    // for (uint32_t i = 0; i < numOfUEs; i++)
+    // {
+    //     for (uint32_t j = 0; j < 4; j++)
+    //     {
+    //         lteHelper->Attach(ueDevs.Get(i), enbDevs.Get(j));
+    //     }
+    // }
 
-    // Install and start applications on UEs and remote host
-    uint16_t dlPort = 10000;
-    // uint16_t ulPort = 20000;
 
     // randomize a bit start times to avoid simulation artifacts
     // (e.g., buffer overflows due to packet transmissions happening
@@ -397,99 +298,182 @@ main(int argc, char* argv[])
         Ptr<Ipv4StaticRouting> ueStaticRouting =
             ipv4RoutingHelper.GetStaticRouting(ue->GetObject<Ipv4>());
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
-
-        for (uint32_t b = 0; b < 1; ++b)
-        {
-            ++dlPort;
-            // ++ulPort;
-
-            ApplicationContainer clientApps;
-            ApplicationContainer serverApps;
-
-            UdpClientHelper dlClientHelper(ueIpIfaces.GetAddress(u), dlPort);
-            dlClientHelper.SetAttribute("MaxPackets", UintegerValue(1000000));
-            dlClientHelper.SetAttribute("Interval", TimeValue(MilliSeconds(1.0)));
-            dlClientHelper.SetAttribute("PacketSize", UintegerValue(1500));
-            clientApps.Add(dlClientHelper.Install(remoteHost));
-            PacketSinkHelper dlPacketSinkHelper("ns3::UdpSocketFactory",
-                                                InetSocketAddress(Ipv4Address::GetAny(), dlPort));
-            serverApps.Add(dlPacketSinkHelper.Install(ue));
-
-            // UdpClientHelper ulClientHelper(remoteHostAddr, ulPort);
-            // ulClientHelper.SetAttribute("MaxPackets", UintegerValue(1000000));
-            // ulClientHelper.SetAttribute("Interval", TimeValue(MilliSeconds(1.0)));
-            // clientApps.Add(ulClientHelper.Install(ue));
-            // PacketSinkHelper ulPacketSinkHelper("ns3::UdpSocketFactory",
-            //                                     InetSocketAddress(Ipv4Address::GetAny(),
-            //                                     ulPort));
-            // serverApps.Add(ulPacketSinkHelper.Install(remoteHost));
-
-            Ptr<EpcTft> tft = Create<EpcTft>();
-            EpcTft::PacketFilter dlpf;
-            dlpf.localPortStart = dlPort;
-            dlpf.localPortEnd = dlPort;
-            tft->Add(dlpf);
-            // EpcTft::PacketFilter ulpf;
-            // ulpf.remotePortStart = ulPort;
-            // ulpf.remotePortEnd = ulPort;
-            // tft->Add(ulpf);
-            EpsBearer bearer(EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
-            lteHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, tft);
-
-            Time startTime = Seconds(startTimeSeconds->GetValue());
-            serverApps.Start(startTime);
-            clientApps.Start(startTime);
-        }
     }
 
+    // Install and start applications on UEs and remote host
+    // uint16_t ulPort = 20000;
+    uint16_t dlPort = 10000;
+    ++dlPort;
+    // ++ulPort;
+
+    ApplicationContainer serverApps;
+
+    // The sink will always listen to the specified ports
+    UdpServerHelper dlPacketSinkHelper(dlPort);
+    serverApps.Add(dlPacketSinkHelper.Install(ueNodes.Get(0)));
+
+    UdpClientHelper dlClient;
+    dlClient.SetAttribute("RemotePort", UintegerValue(dlPort));
+    dlClient.SetAttribute("PacketSize", UintegerValue(udpPacketSize));
+    dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF));
+
+    bool udpFullBuffer = true;
+    double ueNumPereNb = 10;
+
+    if(udpFullBuffer)
+    {
+        double bitRate = 12000000;
+        bitRate /= ueNumPereNb;    // Divide the cell capacity among UEs
+        if (bandwidth > 20e6)
+        {
+            bitRate *= bandwidth / 20e6;
+        }
+        // lambda = bitRate / static_cast<double>(udpPacketSize * 8);
+    }
+    dlClient.SetAttribute("Interval", TimeValue(Seconds(0.01)));
+
+    // The bearer that will carry low latency traffic
+    EpsBearer bearer(EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
+
+    Ptr<EpcTft> tft = Create<EpcTft>();
+    EpcTft::PacketFilter dlpf;
+    dlpf.localPortStart = dlPort;
+    dlpf.localPortEnd = dlPort;
+    tft->Add(dlpf);
+
+    ApplicationContainer clientApps;
+
+    for (uint32_t i = 0; i < ueNodes.GetN(); ++i)
+    {
+        Ptr<Node> ue = ueNodes.Get(i);
+        Ptr<NetDevice> ueDevice = ueDevs.Get(i);
+        Address ueAddress = ueIpIfaces.GetAddress(i);
+
+        // The client, who is transmitting, is installed in the remote host,
+        // with destination address set to the address of the UE
+        dlClient.SetAttribute("RemoteAddress", AddressValue(ueAddress));
+        clientApps.Add(dlClient.Install(remoteHost));
+
+        // Activate a dedicated bearer for the traffic type
+        lteHelper->ActivateDedicatedEpsBearer(ueDevice, bearer, tft);
+    }
+
+    // Time startTime = Seconds(startTimeSeconds->GetValue());
+    double startTime = startTimeSeconds->GetValue();
+    // start server and client apps
+    serverApps.Start(Seconds(startTime));
+    clientApps.Start(Seconds(startTime));
+    serverApps.Stop(Seconds(simTime));
+    clientApps.Stop(Seconds(simTime));
+
     lteHelper->EnableTraces();
-    Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats();
-    rlcStats->SetAttribute("EpochDuration", TimeValue(Seconds(0.05)));
-    Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats();
-    pdcpStats->SetAttribute("EpochDuration", TimeValue(Seconds(0.05)));
+    FlowMonitorHelper flowmonHelper;
+    NodeContainer endpointNodes;
+    endpointNodes.Add(remoteHost);
+    endpointNodes.Add(ueNodes);
 
-    // // Trace sink for the packet sink of UE
-    std::ostringstream oss;
-    oss << "/NodeList/" << ueNodes.Get(0)->GetId() << "/ApplicationList/0/$ns3::PacketSink/Rx";
-    Config::ConnectWithoutContext(oss.str(), MakeCallback(&ReceivePacket));
+    Ptr<ns3::FlowMonitor> monitor = flowmonHelper.Install(endpointNodes);
+    monitor->SetAttribute("DelayBinWidth", DoubleValue(0.001));
+    monitor->SetAttribute("JitterBinWidth", DoubleValue(0.001));
+    monitor->SetAttribute("PacketSizeBinWidth", DoubleValue(20));
 
-    // for (uint32_t i = 0; i < 40; ++i)
-    // {
-    //     std::ostringstream oss;
-    //     oss << "/NodeList/" << ueNodes.Get(i)->GetId() <<
-    //     "/ApplicationList/0/$ns3::PacketSink/Rx"; Config::ConnectWithoutContext(oss.str(),
-    //     MakeCallback(&ReceivePacket));
-    // }
-
-    // Config::ConnectWithoutContext("/NodeList//ApplicationList/0/$ns3::PacketSink/Rx/",
-    //                               MakeCallback(&ReceivePacket));
-
-    // TODO: Dynamic user input based function call to either record throughput,getmcs or getsinr
-
-    bool firstWrite = true;
-    std::string rrcType = useIdealRrc ? "ideal_rrc" : "real_rrc";
-    // std::string fileName = "rlf_dl_thrput_speed_0_PfFfMacScheduler_" +
-    // std::to_string(enbNodes.GetN()) + "_eNB_" + rrcType; std::string fileName =
-    // "node_x_y_mcs_"+schedulerType+".txt";
-    // std::string fileName = "node_x_y_mcs_PSS.txt";
-
-    std::string mobileUEstr = mobileUE ? "mobile" : "static";
-    std::string fileName = "node_sinr_throughput_" + schedulerType + "_" + mobileUEstr + ".txt";
-
-    Time binSize = Seconds(0.2);
-    // Simulator::Schedule(Seconds(0.47), &Throughput, firstWrite, binSize, fileName);
-    // FlowMonitorHelper flowmonHelper;
-    // Ptr<FlowMonitor> flowmon = flowmonHelper.InstallAll();
-
-    // Simulator::Schedule(Seconds(0.2), &getMcs, ueGroup1, fileName, firstWrite, lteHelper);
-
-    Simulator::Schedule(Seconds(0.2), &getSinr, ueNodes.Get(0), fileName, firstWrite, lteHelper);
+    // AnimationInterface anim("new-lte.xml");
 
     // To log the course change of UEs movements
     // Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChange));
 
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
+
+    monitor->CheckForLostPackets();
+    Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmonHelper.GetClassifier());
+    FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
+
+    double averageFlowThroughput = 0.0;
+    double averageFlowDelay = 0.0;
+
+    std::ofstream outFile;
+    std::string filename = outputDir + "/" + simTag + "_" + schedulerType ;
+    outFile.open(filename.c_str(), std::ofstream::out | std::ofstream::trunc);
+    if (!outFile.is_open())
+    {
+        std::cout << "Error opening file" << filename << std::endl;
+        // NS_LOG_ERROR("Can't open file " << filename);
+        return 1;
+    }
+    outFile.setf(std::ios_base::fixed);
+
+
+    for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin();
+         i != stats.end();
+         ++i)
+    {
+        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(i->first);
+        std::stringstream protoStream;
+        protoStream << (uint16_t)t.protocol;
+        if (t.protocol == 6)
+        {
+            protoStream.str("TCP");
+        }
+        if (t.protocol == 17)
+        {
+            protoStream.str("UDP");
+        }
+
+        outFile << "Flow " << i->first << " (" << t.sourceAddress << ":" << t.sourcePort << " -> " << t.destinationAddress << ":" << t.destinationPort << ") proto " << protoStream.str() << "\n";
+        outFile << "  Tx Packets: " << i->second.txPackets << "\n";
+        outFile << "  Tx Bytes:   " << i->second.txBytes << "\n";
+        outFile << "  TxOffered:  " << i->second.txBytes * 8.0 / (simTime - startTime) / 1000 / 1000 << " Mbps\n";
+        outFile << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+
+        if (i->second.rxPackets > 0)
+        {
+            // Measure the duration of the flow from receiver's perspective
+            double rxDuration =
+                i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds();
+
+            averageFlowThroughput += i->second.rxBytes * 8.0 / rxDuration / 1000 / 1000;
+            averageFlowDelay += 1000 * i->second.delaySum.GetSeconds() / i->second.rxPackets;
+
+            outFile << "  Throughput: " << i->second.rxBytes * 8.0 / rxDuration / 1000 / 1000
+                    << " Mbps\n";
+            outFile << "  Mean delay:  "
+                    << 1000 * i->second.delaySum.GetSeconds() / i->second.rxPackets << " ms\n";
+            // outFile << "  Mean upt:  " << i->second.uptSum / i->second.rxPackets / 1000/1000 << "
+            // Mbps \n";
+            outFile << "  Mean jitter:  "
+                    << 1000 * i->second.jitterSum.GetSeconds() / i->second.rxPackets << " ms\n";
+        }
+        else
+        {
+            outFile << "  Throughput:  0 Mbps\n";
+            outFile << "  Mean delay:  0 ms\n";
+            outFile << "  Mean upt:  0  Mbps \n";
+            outFile << "  Mean jitter: 0 ms\n";
+        }
+        outFile << "  Rx Packets: " << i->second.rxPackets << "\n";
+    }
+
+    double meanFlowThroughput = averageFlowThroughput / stats.size();
+    double meanFlowDelay = averageFlowDelay / stats.size();
+    Ptr<UdpServer> serverApp = serverApps.Get(0)->GetObject<UdpServer>();
+    double totalUdpThroughput =
+        ((serverApp->GetReceived() * udpPacketSize * 8) / (simTime - startTime)) * 1e-6;
+
+    outFile << "\n\n  Mean flow throughput: " << meanFlowThroughput << "\n";
+    outFile << "\n\n  Average flow throughput: " << averageFlowThroughput << "\n";
+    outFile << "  Mean flow delay: " << meanFlowDelay << "\n";
+    outFile << "\n UDP throughput (bps) for UE with node ID 0:" << totalUdpThroughput << std::endl;
+
+    outFile.close();
+
+    std::ifstream f(filename.c_str());
+
+    if (f.is_open())
+    {
+        std::cout << f.rdbuf();
+    }
+
     Simulator::Destroy();
     return 0;
 }
